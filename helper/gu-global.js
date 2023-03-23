@@ -1,11 +1,8 @@
-import axios from 'axios';
 import cheerio from "cheerio";
-import _ from 'lodash';
-import { ProductUniQloModel } from '../models/uniqlo.model.js';
-// Import helper functions
-import { compose, composeAsync, enforceHttpsUrl, extractNumber, extractUrlAttribute, fetchElemAttribute, fetchElemInnerText, fetchHtmlFromUrlByScroll } from "./helpers.js";
-import { ProductGuGlobalModel } from '../models/goglobal.model.js';
 import puppeteer from 'puppeteer';
+import { ProductGuGlobalModel } from '../models/goglobal.model.js';
+// Import helper functions
+import { composeAsync, fetchHtmlFromUrlByScroll } from "./helpers.js";
 
 
 const BASE_URL = "https://www.gu-global.com";
@@ -75,7 +72,7 @@ const extractGuGlobal = async $ => {
 };
 
 /**
- * Fetches the Scotch profile of the given author
+ * Fetches the gu-global profile of the given author
  */
 
 const fetchProductGuGlobal = url => {

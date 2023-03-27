@@ -1,13 +1,24 @@
-import axios from 'axios';
-import cheerio from "cheerio";
 import _ from 'lodash';
-import { ProductUniQloModel } from '../models/uniqlo.model.js';
-// Import helper functions
-import { compose, composeAsync, enforceHttpsUrl, extractNumber, extractUrlAttribute, fetchElemAttribute, fetchElemInnerText, fetchHtmlFromUrlByScroll } from "./helpers.js";
+import cheerio from "cheerio";
 
+// Import helper functions
+import {
+	compose,
+	composeAsync,
+	extractNumber,
+	enforceHttpsUrl,
+	fetchHtmlFromUrl,
+	extractFromElems,
+	fromPairsToObject,
+	fetchElemInnerText,
+	fetchElemAttribute,
+	extractUrlAttribute
+} from "../helper/helpers.js";
+import axios from 'axios';
+import { ProductMatsukiyoModel } from '../models/matsukiyo.model.js';
 
 // scotch.io (Base URL)
-const BASE_URL = "https://www.uniqlo.com";
+const BASE_URL = "https://www.matsukiyo.co.jp";
 
 ///////////////////////////////////////////////////////////////////////////////
 // HELPER FUNCTIONS
@@ -124,29 +135,51 @@ const reqApiDetailProduct = async (href) => {
  * Extract profile from a Scotch author's page using the Cheerio parser instance
  * and returns the author profile object
  */
-const extractUniqQlo = async $ => {
+const extract = async $ => {
 	try {
-		const listProduct = $('.lazyload-wrapper').find('.fr-ec-product-tile-resize-wrapper')
-		listProduct.each(async function (item, elem) {
+		const resultList = $('.resultList')
+		const ulResultList = resultList.find('#itemList')
+		let dataQueryShowMoreBtn = $('.resultList').find('#searchMore').attr('data-query');
+		const arrProduct = []
+		while (dataQueryShowMoreBtn) {
+			console.log('dataQueryShowMoreBtn', dataQueryShowMoreBtn);
+			const { data } = await axios.get(`https://www.matsukiyo.co.jp/store/api/search/next`, {
+				params: {
+					query: dataQueryShowMoreBtn
+				}
+			})
+			dataQueryShowMoreBtn = data?.query
+			ulResultList.append(data.list)
+		}
+		let count = 1;
+		resultList.find('#itemList > li').each(async function (item, elem) {
 			try {
 				const elm = $(this)
-				const img = elm.find('.fr-ec-product-tile__image').find('img').attr('src')
-				// const color = elm.find('.fr-ec-chip fr-ec-chip--product-tile.fr-ec-chip-group-product-tile__chip')
-				const description = elm.find('.fr-ec-flag-text.fr-ec-flag--standard.fr-ec-text-align-left.fr-ec-flag-text--color-secondary.fr-ec-text-transform-normal').text()
-				const detail = elm.find('.fr-ec-product-tile__status-flags-list-item').find('p').text()
-				const name = elm.find('.fr-ec-product-tile__end').find('h3').text()
-				const price = elm.find('.fr-ec-product-tile__end').find('.fr-ec-price').find('p').text()
-				const product = { img, description, detail, name, price };
-				if (!await ProductUniQloModel.exists(product)) {
-					const newProduct = new ProductUniQloModel(product)
+				const img = elm.find('.img').find('img').attr('src')
+				const hrefDetailProduct = elm.find('.img').find('a').attr('href')
+				const dataDetail = await reqApiDetailProduct(hrefDetailProduct)
+				const productDetail = dataDetail('.ctBox02').find('p')
+
+				const productName = elm.find('.ttl').text().toString().trim()
+				const price = elm.find('p[class="price"]').text().toString().trim()
+				const priceInTax = elm.find('p[class="price inTax"]').text().toString().trim()
+				const product = { img: `${BASE_URL}${img}`, productName, price, priceInTax, productDetail: productDetail.text() }
+				if(!await ProductMatsukiyoModel.exists(product))
+				{
+					const newProduct = new ProductMatsukiyoModel(product)
 					await newProduct.save()
 				}
+				// await ProductMatsukiyoModel.deleteMany()
+				arrProduct.push({ img: `${BASE_URL}${img}`, productName, price, priceInTax, productDetail: productDetail.text() })
 			} catch (error) {
-				console.log('err', error);
-
+				console.log('err' ,error);
+				
 			}
 		});
-		return {}
+		return Promise.all([
+			arrProduct
+		]).then(([arrProduct]) => ({ product: arrProduct }));
+		// return { product: arrProduct }
 	} catch (error) {
 		console.log("err", error);
 
@@ -156,9 +189,8 @@ const extractUniqQlo = async $ => {
 /**
  * Fetches the Scotch profile of the given author
  */
-
-const fetchProductUniQlo = url => {
-	return composeAsync(extractUniqQlo, fetchHtmlFromUrlByScroll)(url);
+const fetchProductByList = url => {
+	return composeAsync(extract, fetchHtmlFromUrl)(url);
 };
 
-export { fetchProductUniQlo };
+export { fetchProductByList };

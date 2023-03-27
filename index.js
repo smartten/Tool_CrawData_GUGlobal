@@ -5,14 +5,15 @@ import bodyParser from "body-parser";
 import mongoose from "mongoose";
 import { jancodeRouter } from "./routes/jancode.route.js";
 import { sendResponse } from './helper/helpers.js';
-import { fetchProductByList } from './helper/matsukiyo.co.jp.js';
+import { fetchProductByList } from './services/matsukiyo.co.jp.js';
 import { download } from "./routes/download.route.js";
 import { amazonRouter } from "./routes/amazon.route.js";
-import { fetchProductUniQlo } from "./helper/uniqlo.js";
-import { fetchProductGuGlobal } from "./helper/gu-global.js";
+import { fetchProductUniQlo } from "./services/uniqlo.js";
+import { fetchProductGuGlobal } from "./services/gu-global.js";
 
 const app = express();
 dotenv.config();
+
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
@@ -36,20 +37,21 @@ const connectDB = async () => {
 
 connectDB();
 
+
 app.post('/crawl-by-category', (req, res, next) => {
-  const {url} = req.body;
+  const { url } = req.body;
   console.log(req.body);
   sendResponse(res)(fetchProductByList(url));
 });
 
-app.post('/crawl-uniqlo', (req, res, next) => {
+app.post('/crawl-uniqlo', async (req, res, next) => {
   const {url} = req.body;
   console.log(req.body);
   sendResponse(res)(fetchProductUniQlo(url));
 });
 
 app.post('/crawl-go-global', (req, res, next) => {
-  const {url} = req.body;
+  const { url } = req.body;
   console.log(req.body);
   sendResponse(res)(fetchProductGuGlobal(url));
 });

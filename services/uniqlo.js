@@ -1,24 +1,14 @@
-import _ from 'lodash';
-import cheerio from "cheerio";
-
-// Import helper functions
-import {
-	compose,
-	composeAsync,
-	extractNumber,
-	enforceHttpsUrl,
-	fetchHtmlFromUrl,
-	extractFromElems,
-	fromPairsToObject,
-	fetchElemInnerText,
-	fetchElemAttribute,
-	extractUrlAttribute
-} from "./helpers.js";
 import axios from 'axios';
-import { ProductMatsukiyoModel } from '../models/matsukiyo.model.js';
+import cheerio from "cheerio";
+import _ from 'lodash';
+import { ProductUniQloModel } from '../models/uniqlo.model.js';
+// Import helper functions
+import { compose, composeAsync, enforceHttpsUrl, extractNumber, extractUrlAttribute, fetchElemAttribute, fetchElemInnerText, fetchHtmlFromUrlByScroll } from "../helper/helpers.js";
+import { translateDataApi, translateJpToVi, translateJpToViWithArray } from '../helper/covert.js';
+
 
 // scotch.io (Base URL)
-const BASE_URL = "https://www.matsukiyo.co.jp";
+const BASE_URL = "https://www.uniqlo.com";
 
 ///////////////////////////////////////////////////////////////////////////////
 // HELPER FUNCTIONS
@@ -135,60 +125,44 @@ const reqApiDetailProduct = async (href) => {
  * Extract profile from a Scotch author's page using the Cheerio parser instance
  * and returns the author profile object
  */
-const extract = async $ => {
+const extractUniqQlo = async $ => {
 	try {
-		const resultList = $('.resultList')
-		const ulResultList = resultList.find('#itemList')
-		let dataQueryShowMoreBtn = $('.resultList').find('#searchMore').attr('data-query');
-		const arrProduct = []
-		while (dataQueryShowMoreBtn) {
-			console.log('dataQueryShowMoreBtn', dataQueryShowMoreBtn);
-			const { data } = await axios.get(`https://www.matsukiyo.co.jp/store/api/search/next`, {
-				params: {
-					query: dataQueryShowMoreBtn
-				}
-			})
-			dataQueryShowMoreBtn = data?.query
-			ulResultList.append(data.list)
-		}
-		let count = 1;
-		resultList.find('#itemList > li').each(async function (item, elem) {
+		await ProductUniQloModel.deleteMany()
+		const listProduct = $('.lazyload-wrapper').find('.fr-ec-product-tile-resize-wrapper')
+		listProduct.each(async function (item, elem) {
 			try {
 				const elm = $(this)
-				const img = elm.find('.img').find('img').attr('src')
-				const hrefDetailProduct = elm.find('.img').find('a').attr('href')
-				const dataDetail = await reqApiDetailProduct(hrefDetailProduct)
-				const productDetail = dataDetail('.ctBox02').find('p')
+                const img = elm.find('.fr-ec-product-tile__image').find('img').attr('src')
+				const idProduct = elm.find('a').attr('id')
 
-				const productName = elm.find('.ttl').text().toString()
-				const price = elm.find('p[class="price"]').text().toString()
-				const priceInTax = elm.find('p[class="price inTax"]').text().toString()
-				const product = { img: `${BASE_URL}${img}`, productName, price, priceInTax, productDetail: productDetail.text() }
-				if(!await ProductMatsukiyoModel.exists(product))
-				{
-					const newProduct = new ProductMatsukiyoModel(product)
+				const {data} = await axios.get(`https://www.uniqlo.com/jp/api/commerce/v5/ja/products/${idProduct}/price-groups/00/details?includeModelSize=true&httpFailure=true`)
+				const dataConvert =await translateDataApi(data.result)
+
+				const description = elm.find('.fr-ec-flag-text.fr-ec-flag--standard.fr-ec-text-align-left.fr-ec-flag-text--color-secondary.fr-ec-text-transform-normal').text()
+				const stateFlags = elm.find('.fr-ec-product-tile__status-flags-list-item').find('p').text()
+				const name = elm.find('.fr-ec-product-tile__end').find('h3').text()
+				const price = elm.find('.fr-ec-product-tile__end').find('.fr-ec-price').find('p').text()
+
+				const product = { img, description :await translateJpToVi(description), 
+					stateFlags :await translateJpToViWithArray(stateFlags), 
+					name :await translateJpToVi(name), 
+					price ,
+					...dataConvert
+				};
+
+				if (!await ProductUniQloModel.exists({ productId : dataConvert.productId })) {
+					const newProduct = new ProductUniQloModel(product)
 					await newProduct.save()
 				}
-				// await ProductMatsukiyoModel.deleteMany()
-				arrProduct.push({ img: `${BASE_URL}${img}`, productName, price, priceInTax, productDetail: productDetail.text() })
 			} catch (error) {
-				console.log('err' ,error);
-				
+				console.log('err', error);
+
 			}
-		});
-
-		// console.log('arrProduct', arrProduct);
-
-
-
-		// const extractPosts = extractFromElems(extractPost)();
-		// const extractStats = extractFromElems(extractStat)(fromPairsToObject);
-		// const extractSocialUrls = extractFromElems(extractSocialUrl)(fromPairsToObject);
-
-		return Promise.all([
-			arrProduct
-		]).then(([arrProduct]) => ({ product: arrProduct }));
-		// return { product: arrProduct }
+        });
+        
+		return {
+			message : 'done'
+		}
 	} catch (error) {
 		console.log("err", error);
 
@@ -198,8 +172,9 @@ const extract = async $ => {
 /**
  * Fetches the Scotch profile of the given author
  */
-const fetchProductByList = url => {
-	return composeAsync(extract, fetchHtmlFromUrl)(url);
+
+const fetchProductUniQlo = url => {
+	return composeAsync(extractUniqQlo, fetchHtmlFromUrlByScroll)(url);
 };
 
-export { fetchProductByList };
+export { fetchProductUniQlo };

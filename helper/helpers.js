@@ -8,6 +8,11 @@ import { ProductUniQloModel } from '../models/uniqlo.model.js';
 // UTILITY FUNCTIONS
 ///////////////////////////////////////////////////////////////////////////////
 
+const formatNumber = (number) => {
+    if (!_.isNumber(number)) { return "0" };
+    return Number(number.toFixed()).toLocaleString("en-US");
+};
+
 /**
  * Compose function arguments starting from right to left
  * to an overall function and returns the overall function
@@ -138,6 +143,10 @@ const fetchHtmlFromUrlByScroll = async url => {
 			headless: false
 		});
 		const page = await browser.newPage();
+		await page.setViewport({
+			width: 1920,
+			height: 1080
+		})
 		await page.goto(url);
 		await autoScroll(page);
 
@@ -230,5 +239,6 @@ export {
 	extractNumber,
 	extractUrlAttribute,
 	// sendResponseUniQlo,
-	fetchHtmlFromUrlByScroll
+	fetchHtmlFromUrlByScroll,
+	formatNumber
 };

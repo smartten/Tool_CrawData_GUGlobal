@@ -157,20 +157,22 @@ const extract = async $ => {
 				const elm = $(this)
 				const img = elm.find('.img').find('img').attr('src')
 				const hrefDetailProduct = elm.find('.img').find('a').attr('href')
-				const dataDetail = await reqApiDetailProduct(hrefDetailProduct)
-				const productDetail = dataDetail('.ctBox02').find('p')
+				console.log('hrefDetailProduct' ,hrefDetailProduct);
+				
+				// const dataDetail = await reqApiDetailProduct(hrefDetailProduct)
+				// const productDetail = dataDetail('.ctBox02').find('p')
 
 				const productName = elm.find('.ttl').text().toString().trim()
 				const price = elm.find('p[class="price"]').text().toString().trim()
 				const priceInTax = elm.find('p[class="price inTax"]').text().toString().trim()
-				const product = { img: `${BASE_URL}${img}`, productName, price, priceInTax, productDetail: productDetail.text() }
+				const product = { img: `${BASE_URL}${img}`, productName, price, priceInTax }
 				if(!await ProductMatsukiyoModel.exists(product))
 				{
 					const newProduct = new ProductMatsukiyoModel(product)
 					await newProduct.save()
 				}
 				// await ProductMatsukiyoModel.deleteMany()
-				arrProduct.push({ img: `${BASE_URL}${img}`, productName, price, priceInTax, productDetail: productDetail.text() })
+				arrProduct.push({ img: `${BASE_URL}${img}`, productName, price, priceInTax })
 			} catch (error) {
 				console.log('err' ,error);
 				

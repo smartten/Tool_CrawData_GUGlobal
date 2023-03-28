@@ -9,7 +9,7 @@ import { fetchProductByList } from './services/matsukiyo.co.jp.js';
 import { download } from "./routes/download.route.js";
 import { amazonRouter } from "./routes/amazon.route.js";
 import { fetchProductUniQlo } from "./services/uniqlo.js";
-import { fetchProductGuGlobal } from "./services/gu-global.js";
+import { fetchProduct } from "./services/localbrand.service.js";
 
 const app = express();
 dotenv.config();
@@ -44,17 +44,12 @@ app.post('/crawl-by-category', (req, res, next) => {
   sendResponse(res)(fetchProductByList(url));
 });
 
-app.post('/crawl-uniqlo', async (req, res, next) => {
+app.post('/crawl-local-brand', async (req, res, next) => {
   const {url} = req.body;
   console.log(req.body);
-  sendResponse(res)(fetchProductUniQlo(url));
+  sendResponse(res)(fetchProduct(url));
 });
 
-app.post('/crawl-go-global', (req, res, next) => {
-  const { url } = req.body;
-  console.log(req.body);
-  sendResponse(res)(fetchProductGuGlobal(url));
-});
 
 app.use("/download-excel", download)
 app.use("/jancode", jancodeRouter);

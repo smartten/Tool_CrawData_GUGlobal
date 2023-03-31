@@ -2,6 +2,30 @@
 import mongoose from "mongoose";
 const Schema = mongoose.Schema;
 
+export const ObjectSchemeMatsukiyo = {
+  img: {
+    type: String,
+  },
+  productName: {
+    type: String,
+  },
+  price: [
+    {
+      type: String,
+    },
+  ],
+  priceInTax: [
+    {
+      type: String,
+    },
+  ],
+  productDetail: [
+    {
+      type: String,
+    },
+  ],
+}
+
 export const ObjectScheme = {
     img: {
       type: String,

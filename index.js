@@ -10,9 +10,38 @@ import { download } from "./routes/download.route.js";
 import { amazonRouter } from "./routes/amazon.route.js";
 import { fetchProductUniQlo } from "./services/uniqlo.js";
 import { fetchProduct } from "./services/localbrand.service.js";
+import webdriver from 'selenium-webdriver'
+import chrome from 'selenium-webdriver/chrome.js'
+import http from 'http';
+import url from 'url';
+
 
 const app = express();
 dotenv.config();
+
+const proxy = http.createServer((req, res) => {
+  const targetUrl = 'http://www.test-proxy.com'; // The URL you want to proxy
+  const target = url.parse(targetUrl);
+
+  const options = {
+    host: target.host,
+    port: target.port || 80,
+    path: req.url,
+    method: req.method,
+    headers: req.headers
+  };
+
+  const proxyReq = http.request(options, (proxyRes) => {
+    res.writeHead(proxyRes.statusCode, proxyRes.headers);
+    proxyRes.pipe(res);
+  });
+
+  req.pipe(proxyReq);
+});
+
+proxy.listen(3000, () => {
+  console.log('Proxy server listening on port 3000');
+});
 
 
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -45,7 +74,7 @@ app.post('/crawl-by-category', (req, res, next) => {
 });
 
 app.post('/crawl-local-brand', async (req, res, next) => {
-  const {url} = req.body;
+  const { url } = req.body;
   console.log(req.body);
   sendResponse(res)(fetchProduct(url));
 });
